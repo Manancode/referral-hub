@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "./globals.css";
+import { MantineProvider } from '@mantine/core';
+import '@mantine/core/styles.css'; 
+import "./globals.css"; 
+import { NextAuthProvider } from "./dashboard/components/providers";
 
 const inter = Inter({ subsets: ["latin"] });
+
+const theme = {
+  fontFamily: 'Poppins, sans-serif', // or your desired font
+  primaryColor: 'cyan',
+};
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -16,7 +24,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <NextAuthProvider>
+          <MantineProvider theme={theme}>
+            {children}
+          </MantineProvider>
+        </NextAuthProvider>
+      </body>
     </html>
   );
 }

@@ -1,0 +1,67 @@
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id             String           @id @default(cuid())
+  email          String           @unique
+  name           String?
+  password       String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  subscriptionTier String         @default("free")
+  projects       Project[]
+  searches       Search[]
+}
+
+model Project {
+  id             String           @id @default(cuid())
+  name           String
+  description    String?
+  userId         String
+  user           User             @relation(fields: [userId], references: [id])
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  searches       Search[]
+}
+
+model Search {
+  id             String           @id @default(cuid())
+  keywords       String[]
+  subreddits     String[]
+  projectId      String
+  project        Project          @relation(fields: [projectId], references: [id])
+  userId         String
+  user           User             @relation(fields: [userId], references: [id])
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  results        SearchResult[]
+}
+
+model SearchResult {
+  id             String           @id @default(cuid())
+  username       String
+  postTitle      String
+  postContent    String
+  subreddit      String
+  relevanceScore Float
+  contacted      Boolean          @default(false)
+  searchId       String
+  search         Search           @relation(fields: [searchId], references: [id])
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+enum SubscriptionTier {
+  FREE
+  BASIC
+  PREMIUM
+}

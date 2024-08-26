@@ -1,6 +1,7 @@
-import type { Config } from 'tailwindcss'
+import daisyui from 'daisyui'
 
-const config: Config = {
+
+const config = {
   darkMode: ['class'],
   content: [
     './pages/**/*.{ts,tsx}',
@@ -73,7 +74,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [require('tailwindcss-animate') , daisyui],
 }
 
-export default config 
+export default config
