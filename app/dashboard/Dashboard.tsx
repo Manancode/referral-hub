@@ -7,7 +7,7 @@ export default function Dashboard({ projects } : any) {
   const { data: session, status } = useSession();
 
   if (status === "loading") {
-    return <div>Loading...</div>;
+    return <span className="loading loading-dots loading-md"></span>
   }
 
   if (!session) {
