@@ -79,8 +79,15 @@ export const searchPosts = async (query: string, subreddit?: string  , after?: s
   const endpoint = subreddit 
     ? `/r/${subreddit}/search`
     : '/search';
-  
-    return makeRequest(`${BASE_URL}${endpoint}`, { q: query, limit: 100, sort: 'new', after });
+ 
+    const params = {
+      q: query,
+      limit: 100,
+      sort: 'new',
+      after: after || undefined 
+  };
+
+  return makeRequest(`${BASE_URL}${endpoint}`, params);
 };
 
 export const getSubredditInfo = async (subreddit: string) => {

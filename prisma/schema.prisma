@@ -52,6 +52,7 @@ model Search {
   keywords   String[]
   subreddits String[]
   projectId  String
+  userresults UserResult[]
   project    Project        @relation(fields: [projectId], references: [id])
   userId     String
   user       User           @relation(fields: [userId], references: [id])
@@ -73,6 +74,16 @@ model SearchResult {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
+
+model UserResult {
+  id        String   @id @default(cuid())
+  username  String
+  search    Search   @relation(fields: [searchId], references: [id])
+  searchId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 
 enum SubscriptionTier {
   FREE

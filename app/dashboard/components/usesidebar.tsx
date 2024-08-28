@@ -44,7 +44,7 @@ export function SidebarDemo() {
     } ,
     {
       label: "Search Results",
-      href: "#",
+      href: "/dashboard/results",
       icon: (
         <IconArrowLeft className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
