@@ -5,12 +5,26 @@ import {
   IconArrowLeft,
   IconBrandTabler,
   IconSettings,
+  IconStarFilled,
   IconUserBolt,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { cn } from "@/app/lib/utils";
+
+const UpgradeButton = () => {
+    return (
+      <Link href="/pricing" className="w-full">
+        <button className="w-3/4 py-2 px-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg shadow-md hover:from-purple-600 hover:to-indigo-700 transition duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center space-x-2">
+          <IconStarFilled className="h-5 w-5" />
+          <span className="font-semibold">Upgrade Plan</span>
+        </button>
+      </Link>
+    );
+  };
+
+
 
 export function SidebarDemo() {
   const links = [
@@ -23,7 +37,7 @@ export function SidebarDemo() {
     },
     {
       label: "Projects",
-      href: "/projects",
+      href: "/dashboard/projects",
       icon: (
         <IconUserBolt className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
@@ -38,7 +52,7 @@ export function SidebarDemo() {
 
     {
         label: "Settings",
-        href: "#",
+        href: "/dashboard/settings",
         icon: (
           <IconSettings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
         ),
@@ -65,21 +79,7 @@ export function SidebarDemo() {
             </div>
           </div>
           <div>
-            <SidebarLink
-              link={{
-                label: "You",
-                href: "#",
-                icon: (
-                  <Image
-                    src="/"
-                    className="h-7 w-7 flex-shrink-0 rounded-full"
-                    width={50}
-                    height={50}
-                    alt="Avatar"
-                  />
-                ),
-              }}
-            />
+            <UpgradeButton/>
           </div>
         </SidebarBody>
       </Sidebar>
@@ -90,7 +90,7 @@ export function SidebarDemo() {
 export const Logo = () => {
   return (
     <Link
-      href="#"
+      href="/dashboard"
       className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20"
     >
       <div className="h-5 w-6 bg-black dark:bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0" />
@@ -99,7 +99,7 @@ export const Logo = () => {
         animate={{ opacity: 1 }}
         className="font-medium text-black dark:text-white whitespace-pre"
       >
-        Acet Labs
+        SaaSy
       </motion.span>
     </Link>
   );
@@ -107,7 +107,7 @@ export const Logo = () => {
 export const LogoIcon = () => {
   return (
     <Link
-      href="#"
+      href="/dashboard"
       className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20"
     >
       <div className="h-5 w-6 bg-black dark:bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0" />
