@@ -3,7 +3,7 @@
 import prisma from '../lib/db'
 import { getstripesession, stripe } from '../lib/stripe'
 
-export async function createSubscription(userId: string, priceId: string) {
+export async function createSubscription(userId, priceId) {
   const dbuser = await prisma.user.findUnique({
     where: {
       id: userId
@@ -19,14 +19,14 @@ export async function createSubscription(userId: string, priceId: string) {
 
   const subscriptionUrl = await getstripesession({
     customerid: dbuser.stripeCustomerId,
-    domainurl: process.env.NODE_ENV === "production" ? process.env.PRODUCTION_URL as string : "http://localhost:3000",
+    domainurl: process.env.NODE_ENV === "production" ? process.env.PRODUCTION_URL : "http://localhost:3000",
     priceid: priceId,
   })
 
   return subscriptionUrl
 }
 
-export async function createCustomerPortal(userId: string) {
+export async function createCustomerPortal(userId) {
   const data = await prisma.subscription.findUnique({
     where: {
       userId,
@@ -46,7 +46,7 @@ export async function createCustomerPortal(userId: string) {
 
   const session = await stripe.billingPortal.sessions.create({
     customer: data.user.stripeCustomerId,
-    return_url: process.env.NODE_ENV === "production" ? process.env.PRODUCTION_URL as string : "http://localhost:3000/dashboard"
+    return_url: process.env.NODE_ENV === "production" ? process.env.PRODUCTION_URL  : "http://localhost:3000/dashboard"
   })
 
   return session.url

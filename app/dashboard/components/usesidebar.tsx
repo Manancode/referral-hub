@@ -29,7 +29,7 @@ const UpgradeButton = () => {
 export function SidebarDemo() {
   const links = [
     {
-      label: "Dashboard",
+      label: "Dashboard", 
       href: "/dashboard",
       icon: (
         <IconBrandTabler className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
@@ -43,7 +43,7 @@ export function SidebarDemo() {
       ),
     } ,
     {
-      label: "Search Results",
+      label: "Content Management",
       href: "/dashboard/results",
       icon: (
         <IconArrowLeft className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
@@ -51,10 +51,54 @@ export function SidebarDemo() {
     },
 
     {
-        label: "Settings",
+        label: "Engagement",
         href: "/dashboard/settings",
         icon: (
           <IconSettings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        ),
+      },
+
+      {
+        label: "Direct Messaging",
+        href: "/dashboard/results",
+        icon: (
+          <IconArrowLeft className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        ),
+      },
+
+      {
+        label: "Subreddit Analysis",
+        href: "/dashboard/results",
+        icon: (
+          <IconArrowLeft className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        ),
+      },
+      {
+        label: "Automation",
+        href: "/dashboard/results",
+        icon: (
+          <IconArrowLeft className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        ),
+      },
+      {
+        label: "Lead Management",
+        href: "/dashboard/results",
+        icon: (
+          <IconArrowLeft className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        ),
+      },
+      {
+        label: "Reports",
+        href: "/dashboard/results",
+        icon: (
+          <IconArrowLeft className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+        ),
+      },
+      {
+        label: "Settings",
+        href: "/dashboard/results",
+        icon: (
+          <IconArrowLeft className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
         ),
       },
 

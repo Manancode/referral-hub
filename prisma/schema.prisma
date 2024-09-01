@@ -17,10 +17,26 @@ model User {
   subscriptionTier  SubscriptionTier @default(FREE)
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
-  subscription      Subscription?
+  subscription      Subscription[]
   projects          Project[]
   searches          Search[]
+  searchUsage       SearchUsage?
+  searchJob         SearchJob[] 
+  searchQueue        SearchQueue[]
+  userProfile      UserProfile[]
 }
+
+model UserProfile {
+  id               String   @id @default(cuid())
+  username         String
+  potentialFounder Boolean
+  relevanceScore   Float
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
 
 model Subscription {
   id                    String   @id @default(cuid())
@@ -33,7 +49,7 @@ model Subscription {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
   user                  User     @relation(fields: [userId], references: [id])
-  userId                String   @unique
+  userId                String   
 }
 
 model Project {
@@ -52,13 +68,16 @@ model Search {
   keywords   String[]
   subreddits String[]
   projectId  String
-  userresults UserResult[]
   project    Project        @relation(fields: [projectId], references: [id])
   userId     String
   user       User           @relation(fields: [userId], references: [id])
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
+  userresults UserResult[]
   results    SearchResult[]
+  status     String?        // Add this field
+  jobId      String?        // Add this field
+  productIdea String?       // Add this field
 }
 
 model SearchResult {
@@ -73,7 +92,41 @@ model SearchResult {
   search         Search   @relation(fields: [searchId], references: [id])
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  isDeleted      Boolean  @default(false)
 }
+
+model SearchJob {
+  id        String   @id @default(cuid())
+  userId    String 
+  user      User     @relation(fields: [userId], references: [id])
+  status    String
+  progress  Int      @default(0)
+  result    Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SearchQueue {
+  id              String   @id @default(cuid())
+  userId          String   
+  productIdea     String
+  keywords        String[]
+  tier            SubscriptionTier
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+
+model SearchUsage {
+  id                String   @id @default(cuid())
+  userId            String   @unique 
+  user              User     @relation(fields: [userId], references: [id])
+  searchesPerformed Int      @default(0)
+  lastSearchDate    DateTime @default(now()) // Added lastSearchDate field
+  lastResetDate     DateTime @default(now())
+}
+
 
 model UserResult {
   id        String   @id @default(cuid())
@@ -82,8 +135,8 @@ model UserResult {
   searchId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  isDeleted Boolean  @default(false)
 }
-
 
 enum SubscriptionTier {
   FREE

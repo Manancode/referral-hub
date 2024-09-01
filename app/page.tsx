@@ -11,6 +11,8 @@ import ProductFeatures from '@/components/ui/afterfeature';
 import PricingPage from "@/components/ui/pricing";
 import { FooterLinks } from '@/components/FooterLinks';
 import { Timeline } from '@/components/ui/timeline';
+import SignupPage from './signup/page';
+import SignInPage from './api/auth/signin/page';
 
 
 
@@ -34,6 +36,8 @@ export default function Home() {
   return (
     <MantineProvider theme={theme} defaultColorScheme="dark">
     <div>
+      <SignupPage/>
+      <SignInPage/>
       <HeaderMegaMenu/>
         <HeroSection/>
         <CustomerInsight/>
