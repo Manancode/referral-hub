@@ -200,7 +200,7 @@
 
       for (const user of users) {
         try {
-          await getUserInfo(user.username);
+          await getUserInfo(user.username); 
         } catch (error) {
           if (axios.isAxiosError(error)) {
             if (error.response && error.response.status === 404) {
@@ -217,3 +217,108 @@
       console.error('Error updating deleted content:', error);
     }
   };
+
+
+  export const getSubredditRules = async (subreddit: string) => {
+  return makeRequest(`${BASE_URL}/r/${subreddit}/about/rules`);
+};
+
+export const getSubredditWiki = async (subreddit: string, page: string = 'index') => {
+  return makeRequest(`${BASE_URL}/r/${subreddit}/wiki/${page}`);
+};
+
+export const getSubredditModerators = async (subreddit: string) => {
+  return makeRequest(`${BASE_URL}/r/${subreddit}/about/moderators`);
+};
+
+export const getUserMultireddits = async (username: string) => {
+  return makeRequest(`${BASE_URL}/api/multi/user/${username}`);
+};
+
+export const getSubredditTopContributors = async (subreddit: string) => {
+  return makeRequest(`${BASE_URL}/r/${subreddit}/about/contributors`);
+};
+
+export const searchPostsAdvanced = async (query: string, params: {
+  subreddit?: string,
+  sort?: 'relevance' | 'hot' | 'top' | 'new' | 'comments',
+  time?: 'hour' | 'day' | 'week' | 'month' | 'year' | 'all',
+  limit?: number,
+  after?: string
+}) => {
+  const endpoint = params.subreddit ? `/r/${params.subreddit}/search` : '/search';
+  return makeRequest(`${BASE_URL}${endpoint}`, {
+    q: query,
+    sort: params.sort || 'relevance',
+    t: params.time,
+    limit: params.limit || 100,
+    after: params.after,
+    type: 'link'
+  });
+};
+
+export const getSubredditKeywordStats = async (subreddit: string, keywords: any[]) => {
+  const posts = await getHotPosts(subreddit);
+  const stats = keywords.reduce((acc, keyword) => ({ ...acc, [keyword]: 0 }), {});
+
+  posts.data.children.forEach((post: { data: { title: string; selftext: string; }; }) => {
+    keywords.forEach(keyword => {
+      if (post.data.title.toLowerCase().includes(keyword.toLowerCase()) ||
+          post.data.selftext.toLowerCase().includes(keyword.toLowerCase())) {
+        stats[keyword]++;
+      }
+    });
+  });
+
+  return stats;
+};
+
+export const analyzeUserEngagement = async (username: string) => {
+  const history = await getUserHistory(username);
+  const karma = await makeRequest(`${BASE_URL}/api/v1/me/karma`);
+
+  const totalPosts = history.posts.length;
+  const totalComments = history.comments.length;
+  const avgPostScore = history.posts.reduce((sum: any, post: { data: { score: any; }; }) => sum + post.data.score, 0) / totalPosts;
+  const avgCommentScore = history.comments.reduce((sum: any, comment: { data: { score: any; }; }) => sum + comment.data.score, 0) / totalComments;
+
+  return {
+    username,
+    totalPosts,
+    totalComments,
+    avgPostScore,
+    avgCommentScore,
+    karmaBreakdown: karma.data
+  };
+};
+
+export const getSubredditSentiment = async (subreddit: string, sampleSize: number = 100) => {
+  const posts = await makeRequest(`${BASE_URL}/r/${subreddit}/hot`, { limit: sampleSize });
+  // Implement sentiment analysis here (you may want to use a third-party library)
+  // This is a placeholder implementation
+  const sentimentScore = posts.data.children.reduce((sum: number, post: { data: { score: number; }; }) => {
+    // Simplified sentiment calculation (replace with actual sentiment analysis)
+    const score = post.data.score > 0 ? 1 : -1;
+    return sum + score;
+  }, 0) / sampleSize;
+
+  return {
+    subreddit,
+    sentimentScore,
+    sampleSize
+  };
+};
+
+export const findRelatedSubreddits = async (subreddit: string) => {
+  const info = await getSubredditInfo(subreddit);
+  const relatedSubreddits = info.data.advertiser_category?.split(',') || [];
+  const results = await Promise.all(relatedSubreddits.map(async (relatedSub: string) => {
+    const subInfo = await getSubredditInfo(relatedSub.trim());
+    return {
+      name: relatedSub.trim(),
+      subscribers: subInfo.data.subscribers,
+      publicDescription: subInfo.data.public_description
+    };
+  }));
+  return results.sort((a, b) => b.subscribers - a.subscribers);
+};

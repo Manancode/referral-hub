@@ -1,8 +1,8 @@
-import Queue from 'bull';
-import redis from 'ioredis';
+// file: src/lib/redisConfig.js
+import Redis from 'ioredis';
 
-const createRedisClient = () => {
-  const client = new redis({
+export const createRedisClient = () => {
+  const client = new Redis({
     host: process.env.REDIS_HOST,
     port: parseInt(process.env.REDIS_PORT || '6379'),
     password: process.env.REDIS_PASSWORD,
@@ -20,8 +20,4 @@ const createRedisClient = () => {
   return client;
 };
 
-const redisClient = createRedisClient();
-
-export const searchQueue = new Queue('search-queue', {
-  redis: redisClient,
-});
+export const redis = createRedisClient();

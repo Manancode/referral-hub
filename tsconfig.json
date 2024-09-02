@@ -21,6 +21,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/lib/reddit.js", "app/api/searches/route.js", "app/api/projects/route.ts", "app/api/auth/[...nextauth]/route.ts", "app/dashboard/ClientDashboardPage", "app/dashboard/page.jsx", "app/dashboard/DashboardClient.js", "app/dashboard/server.js", "app/dashboard/projects/page.js", "app/dashboard/projects/page.jsx", "app/api/auth/signup/route.js", "app/lib/client.js", "app/dashboard/components/SearchForm.tsx", "app/pricing/page.jsx", "app/dashboard/Dashboard.jsx", "app/pricing/serverActions.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/lib/reddit.js", "app/api/searches/route.js", "app/api/projects/route.ts", "app/api/auth/[...nextauth]/route.ts", "app/dashboard/ClientDashboardPage", "app/dashboard/page.jsx", "app/dashboard/DashboardClient.js", "app/dashboard/server.js", "app/dashboard/projects/page.js", "app/dashboard/projects/page.jsx", "app/api/auth/signup/route.js", "app/lib/client.js", "app/dashboard/components/SearchForm.tsx", "app/pricing/page.jsx", "app/dashboard/Dashboard.jsx", "app/pricing/serverActions.js", "app/scheduledTasks.js", "app/lib/redditApiUtils.js"],
   "exclude": ["node_modules"]
 }

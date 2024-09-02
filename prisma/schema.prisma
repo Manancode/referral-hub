@@ -22,8 +22,8 @@ model User {
   searches          Search[]
   searchUsage       SearchUsage?
   searchJob         SearchJob[] 
-  searchQueue        SearchQueue[]
-  userProfile      UserProfile[]
+  searchQueue       SearchQueue[]
+  userProfile       UserProfile[]
 }
 
 model UserProfile {
@@ -36,7 +36,6 @@ model UserProfile {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
-
 
 model Subscription {
   id                    String   @id @default(cuid())
@@ -64,20 +63,23 @@ model Project {
 }
 
 model Search {
-  id         String         @id @default(cuid())
-  keywords   String[]
-  subreddits String[]
-  projectId  String
-  project    Project        @relation(fields: [projectId], references: [id])
-  userId     String
-  user       User           @relation(fields: [userId], references: [id])
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-  userresults UserResult[]
-  results    SearchResult[]
-  status     String?        // Add this field
-  jobId      String?        // Add this field
-  productIdea String?       // Add this field
+  id                  String               @id @default(cuid())
+  keywords            String[]
+  subreddits          String[]
+  projectId           String
+  project             Project              @relation(fields: [projectId], references: [id])
+  userId              String
+  user                User                 @relation(fields: [userId], references: [id])
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  userresults         UserResult[]
+  results             SearchResult[]
+  status              String?
+  jobId               String?
+  productIdea         String?
+  contentSuggestions  ContentSuggestion[]
+  outreachStrategies  OutreachStrategy[]
+  subredditAnalyses   SubredditAnalysis[]
 }
 
 model SearchResult {
@@ -93,6 +95,7 @@ model SearchResult {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   isDeleted      Boolean  @default(false)
+  isComment      Boolean  @default(false)
 }
 
 model SearchJob {
@@ -117,16 +120,14 @@ model SearchQueue {
   user            User     @relation(fields: [userId], references: [id])
 }
 
-
 model SearchUsage {
   id                String   @id @default(cuid())
   userId            String   @unique 
   user              User     @relation(fields: [userId], references: [id])
   searchesPerformed Int      @default(0)
-  lastSearchDate    DateTime @default(now()) // Added lastSearchDate field
+  lastSearchDate    DateTime @default(now())
   lastResetDate     DateTime @default(now())
 }
-
 
 model UserResult {
   id        String   @id @default(cuid())
@@ -136,6 +137,47 @@ model UserResult {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   isDeleted Boolean  @default(false)
+}
+
+model ContentSuggestion {
+  id              String   @id @default(cuid())
+  type            String   // 'post', 'reply', or 'engagement'
+  content         String   @db.Text
+  targetSubreddit String?
+  targetPostId    String?
+  targetUsername  String?
+  searchId        String
+  search          Search   @relation(fields: [searchId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model OutreachStrategy {
+  id              String   @id @default(cuid())
+  username        String
+  relevanceScore  Float
+  strategy        String   @db.Text
+  searchId        String
+  search          Search   @relation(fields: [searchId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SubredditAnalysis {
+  id              String   @id @default(cuid())
+  name            String
+  subscribers     Int
+  relevance       Float
+  rules           Json
+  wiki            String?  @db.Text
+  moderators      Json
+  topContributors Json
+  keywordStats    Json
+  sentiment       Float
+  searchId        String
+  search          Search   @relation(fields: [searchId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 enum SubscriptionTier {

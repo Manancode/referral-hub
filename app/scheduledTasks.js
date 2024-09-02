@@ -31,7 +31,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-async function sendEmail(to: string, subject: string, text: string, html: string, attachments?: any[]) {
+async function sendEmail(to, subject, text, html, attachments) {
   console.log('Preparing to send email to:', to);
   try {
     const info = await transporter.sendMail({
@@ -102,11 +102,11 @@ async function sendDailyReports() {
   }
 }
 
-function generateCSV(searches: any[]) {
+function generateCSV(searches) {
   console.log('Generating CSV from searches:', searches);
   const headers = ['username', 'postTitle', 'postContent', 'subreddit', 'relevanceScore', 'createdAt'];
   const data = searches.flatMap(search =>
-    search.results.map((result: { username: any; postTitle: any; postContent: any; subreddit: any; relevanceScore: any; createdAt: any; }) => [
+    search.results.map((result) => [
       result.username,
       result.postTitle,
       result.postContent,
@@ -143,3 +143,22 @@ console.log('Cron jobs scheduled');
 
 // Export functions for potential use in other parts of the application
 export { resetDailySearchCounts, sendEmail, sendDailyReports };
+
+
+export async function sendCSVReport(userId, csvData) {
+  console.log(`Sending CSV report to user ${userId}`);
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  await sendEmail(
+    user.email,
+    'Your Daily Potential Customer Report',
+    'Please find attached your daily report of potential customers.',
+    '<p>Please find attached your daily report of potential customers.</p>',
+    [
+      {
+        filename: 'potential_customers.csv',
+        content: csvData
+      }
+    ]
+  );
+  console.log(`CSV report sent to user ${userId}`);
+}
