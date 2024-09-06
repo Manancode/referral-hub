@@ -1,484 +1,209 @@
-/**
- * v0 by Vercel.
- * @see https://v0.dev/t/FSb9fYz6ItF
- * Documentation: https://v0.dev/docs#integrating-generated-code-into-your-nextjs-app
- */
-import Link from "next/link"
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
+"use client"
+import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import axios from 'axios';
+import { Button, Card, Badge, Progress, Modal, TextInput, Select, Alert, Group, Text, ActionIcon } from '@mantine/core';
+import { IconPencil, IconTrash } from '@tabler/icons-react';
 
-export default function Component() {
+export default function Dashboard() {
+  const { data: session } = useSession();
+  const [projects, setProjects] = useState([]);
+  const [searches, setSearches] = useState([]);
+  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
+  const [isAddToSearchQueueModalOpen, setIsAddToSearchQueueModalOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [productIdea, setProductIdea] = useState('');
+  const [keywords, setKeywords] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [userTier, setUserTier] = useState('');
+
+  useEffect(() => {
+    if (session) {
+      fetchProjects();
+      fetchUserTier();
+      fetchSearches();
+    }
+  }, [session]);
+
+  const fetchProjects = async () => {
+    try {
+      const response = await axios.get('/api/projects');
+      setProjects(response.data);
+    } catch (error) {
+      setError('Failed to fetch projects');
+    }
+  };
+
+  const fetchSearches = async () => {
+    try {
+      const response = await axios.get('/api/searches');
+      setSearches(response.data);
+    } catch (error) {
+      setError('Failed to fetch searches');
+    }
+  };
+
+  const fetchUserTier = async () => {
+    try {
+      const response = await axios.get('/api/user-tier');
+      setUserTier(response.data.tier);
+    } catch (error) {
+      setError('Failed to fetch user tier');
+    }
+  };
+
+  const handleCreateProject = async () => {
+    try {
+      if (userTier === 'free' && projects.length >= 1) {
+        setError('Free accounts are limited to 1 project');
+        return;
+      }
+      if (userTier === 'basic' && projects.length >= 2) {
+        setError('Basic accounts are limited to 2 projects');
+        return;
+      }
+      if (userTier === 'premium' && projects.length >= 3) {
+        setError('Premium accounts are limited to 3 projects');
+        return;
+      }
+
+      const response = await axios.post('/api/projects', { name: newProjectName });
+      setSuccess('Project created successfully');
+      setNewProjectName('');
+      setIsCreateProjectModalOpen(false);
+      fetchProjects();
+    } catch (error) {
+      setError(error.response?.data?.error || 'Error creating project');
+    }
+  };
+
+  const handleAddToSearchQueue = async () => {
+    try {
+      if (!selectedProjectId) {
+        setError('Please select a project first');
+        return;
+      }
+      const response = await axios.post('/api/searches', { 
+        productIdea, 
+        keywords: keywords.split(',').map(k => k.trim()),
+        projectId: selectedProjectId
+      });
+      setSuccess('Search added to queue successfully');
+      setIsAddToSearchQueueModalOpen(false);
+      setProductIdea('');
+      setKeywords('');
+      fetchSearches();
+    } catch (error) {
+      setError(error.response?.data?.error || 'Error adding to search queue');
+    }
+  };
+
+  const handleDeleteProject = async (id) => {
+    try {
+      await axios.delete(`/api/projects/${id}`);
+      setSuccess('Project deleted successfully');
+      fetchProjects();
+    } catch (error) {
+      setError('Failed to delete project');
+    }
+  };
+
+  if (!session) {
+    return <Text>Please sign in to access the dashboard.</Text>;
+  }
+
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background">
-      <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b bg-background px-6">
-        <Link href="#" className="flex items-center gap-2" prefetch={false}>
-          <MountainIcon className="h-6 w-6" />
-          <span className="text-lg font-semibold">Redditly</span>
-        </Link>
-        <nav className="flex items-center gap-4">
-          <Link href="#" className="text-sm font-medium hover:text-primary" prefetch={false}>
-            Projects
-          </Link>
-          <Link href="#" className="text-sm font-medium hover:text-primary" prefetch={false}>
-            Search Queue
-          </Link>
-          <Link href="#" className="text-sm font-medium hover:text-primary" prefetch={false}>
-            Insights
-          </Link>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <img
-                  src="/placeholder.svg"
-                  width={32}
-                  height={32}
-                  alt="Avatar"
-                  className="rounded-full"
-                  style={{ aspectRatio: "32/32", objectFit: "cover" }}
-                />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuItem>Billing</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Logout</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </nav>
-      </header>
-      <main className="flex-1 px-6 py-8">
-        <div className="grid gap-8">
-          <section>
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Projects</h2>
-              <Button>Create Project</Button>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex items-center justify-between">
-                  <div className="text-lg font-semibold">Project A</div>
-                  <Badge variant="secondary">Active</Badge>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Status</span>
-                      <span>In Progress</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Leads</span>
-                      <span>23</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Searches</span>
-                      <span>12</span>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">Last updated: 2 days ago</div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon">
-                        <FilePenIcon className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <TrashIcon className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </div>
-                  </div>
-                </CardFooter>
-              </Card>
-              <Card>
-                <CardHeader className="flex items-center justify-between">
-                  <div className="text-lg font-semibold">Project B</div>
-                  <Badge variant="outline">Paused</Badge>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Status</span>
-                      <span>Paused</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Leads</span>
-                      <span>12</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Searches</span>
-                      <span>6</span>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">Last updated: 1 week ago</div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon">
-                        <FilePenIcon className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <TrashIcon className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </div>
-                  </div>
-                </CardFooter>
-              </Card>
-              <Card>
-                <CardHeader className="flex items-center justify-between">
-                  <div className="text-lg font-semibold">Project C</div>
-                  <Badge variant="secondary">Active</Badge>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Status</span>
-                      <span>In Progress</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Leads</span>
-                      <span>45</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Searches</span>
-                      <span>22</span>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">Last updated: 3 days ago</div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon">
-                        <FilePenIcon className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <TrashIcon className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </div>
-                  </div>
-                </CardFooter>
-              </Card>
-              <Card>
-                <CardHeader className="flex items-center justify-between">
-                  <div className="text-lg font-semibold">Project D</div>
-                  <Badge variant="outline">Completed</Badge>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Status</span>
-                      <span>Completed</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Leads</span>
-                      <span>78</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Searches</span>
-                      <span>32</span>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">Last updated: 2 weeks ago</div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon">
-                        <FilePenIcon className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <TrashIcon className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </div>
-                  </div>
-                </CardFooter>
-              </Card>
-            </div>
-          </section>
-          <section>
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Search Queue</h2>
-              <Button>New Search</Button>
-            </div>
-            <div className="grid gap-4">
-              <Card>
-                <CardHeader className="flex items-center justify-between">
-                  <div className="text-lg font-semibold">Search A</div>
-                  <Badge variant="secondary">Active</Badge>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Status</span>
-                      <span>In Progress</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Leads</span>
-                      <span>23</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Progress</span>
-                      <Progress value={75} aria-label="75% complete" />
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">Last updated: 2 hours ago</div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon">
-                        <PauseIcon className="h-4 w-4" />
-                        <span className="sr-only">Pause</span>
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <RefreshCwIcon className="h-4 w-4" />
-                        <span className="sr-only">Refresh</span>
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <TrashIcon className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </div>
-                  </div>
-                </CardFooter>
-              </Card>
-              <Card>
-                <CardHeader className="flex items-center justify-between">
-                  <div className="text-lg font-semibold">Search B</div>
-                  <Badge variant="outline">Paused</Badge>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Status</span>
-                      <span>Paused</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Leads</span>
-                      <span>12</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Progress</span>
-                      <Progress value={50} aria-label="50% complete" />
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">Last updated: 1 day ago</div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon">
-                        <PlayIcon className="h-4 w-4" />
-                        <span className="sr-only">Resume</span>
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <RefreshCwIcon className="h-4 w-4" />
-                        <span className="sr-only">Refresh</span>
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <TrashIcon className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </div>
-                  </div>
-                </CardFooter>
-              </Card>
-              <Card>
-                <CardHeader className="flex items-center justify-between">
-                  <div className="text-lg font-semibold">Search C</div>
-                  <Badge variant="outline">Completed</Badge>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Status</span>
-                      <span>Completed</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Leads</span>
-                      <span>45</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Progress</span>
-                      <Progress value={100} aria-label="100% complete" />
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">Last updated: 3 days ago</div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon">
-                        <RefreshCwIcon className="h-4 w-4" />
-                        <span className="sr-only">Refresh</span>
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <TrashIcon className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </div>
-                  </div>
-                </CardFooter>
-              </Card>
-            </div>
-          </section>
-          <section>
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Insights</h2>
-              <Button>View All</Button>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex items-center justify-between">
-                  <div className="text-lg font-semibold">Total Leads</div>
-                </CardHeader>
-              </Card>
-            </div>
-          </section>
+    <div style={{ padding: '2rem' }}>
+      {error && <Alert color="red" title="Error">{error}</Alert>}
+      {success && <Alert color="green" title="Success">{success}</Alert>}
+      
+      <section style={{ marginBottom: '2rem' }}>
+        <Group position="apart" style={{ marginBottom: '1rem' }}>
+          <Text size="xl" weight={700}>Projects</Text>
+          <Button onClick={() => setIsCreateProjectModalOpen(true)}>Create Project</Button>
+        </Group>
+        <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))' }}>
+          {projects.map(project => (
+            <Card key={project.id} shadow="sm" padding="lg">
+              <Group position="apart" style={{ marginBottom: 5 }}>
+                <Text weight={500}>{project.name}</Text>
+                <Badge color={project.status === 'Active' ? 'green' : 'gray'}>{project.status}</Badge>
+              </Group>
+              <Text size="sm" color="dimmed">Status: {project.status}</Text>
+              <Text size="xs" color="dimmed" style={{ marginTop: '1rem' }}>Last updated: {project.updatedAt}</Text>
+              <Group position="right" style={{ marginTop: '1rem' }}>
+                <ActionIcon variant="default" size="lg">
+                  <IconPencil size="1.1rem" stroke={1.5} />
+                </ActionIcon>
+                <ActionIcon variant="default" size="lg" onClick={() => handleDeleteProject(project.id)}>
+                  <IconTrash size="1.1rem" stroke={1.5} />
+                </ActionIcon>
+              </Group>
+            </Card>
+          ))}
         </div>
-      </main>
+      </section>
+      
+      <section>
+        <Group position="apart" style={{ marginBottom: '1rem' }}>
+          <Text size="xl" weight={700}>Search Queue</Text>
+          <Button onClick={() => setIsAddToSearchQueueModalOpen(true)}>Add to Search Queue</Button>
+        </Group>
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          {searches.map(search => (
+            <Card key={search.id} shadow="sm" padding="lg">
+              <Group position="apart" style={{ marginBottom: 5 }}>
+                <Text weight={500}>{search.productIdea}</Text>
+                <Badge color={search.status === 'Active' ? 'green' : 'gray'}>{search.status}</Badge>
+              </Group>
+              <Text size="sm" color="dimmed">Keywords: {search.keywords.join(', ')}</Text>
+              <Group position="apart" style={{ marginTop: '1rem' }}>
+                <Text size="sm" color="dimmed">Progress:</Text>
+                <Progress value={search.progress} style={{ width: '60%' }} />
+              </Group>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <Modal opened={isCreateProjectModalOpen} onClose={() => setIsCreateProjectModalOpen(false)} title="Create New Project">
+        <TextInput
+          label="Project Name"
+          placeholder="Enter project name"
+          value={newProjectName}
+          onChange={(event) => setNewProjectName(event.currentTarget.value)}
+          style={{ marginBottom: '1rem' }}
+        />
+        <Button onClick={handleCreateProject}>Create Project</Button>
+      </Modal>
+
+      <Modal opened={isAddToSearchQueueModalOpen} onClose={() => setIsAddToSearchQueueModalOpen(false)} title="Add to Search Queue">
+        <Select
+          label="Project"
+          placeholder="Select a project"
+          data={projects.map(project => ({ value: project.id, label: project.name }))}
+          value={selectedProjectId}
+          onChange={setSelectedProjectId}
+          style={{ marginBottom: '1rem' }}
+        />
+        <TextInput
+          label="Product Idea"
+          placeholder="Enter product idea"
+          value={productIdea}
+          onChange={(event) => setProductIdea(event.currentTarget.value)}
+          style={{ marginBottom: '1rem' }}
+        />
+        <TextInput
+          label="Keywords"
+          placeholder="Enter comma-separated keywords"
+          value={keywords}
+          onChange={(event) => setKeywords(event.currentTarget.value)}
+          style={{ marginBottom: '1rem' }}
+        />
+        <Button onClick={handleAddToSearchQueue}>Add to Queue</Button>
+      </Modal>
     </div>
-  )
-}
-
-function FilePenIcon(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 22h6a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v10" />
-      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-      <path d="M10.4 12.6a2 2 0 1 1 3 3L8 21l-4 1 1-4Z" />
-    </svg>
-  )
-}
-
-
-function MountainIcon(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
-    </svg>
-  )
-}
-
-
-function PauseIcon(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="14" y="4" width="4" height="16" rx="1" />
-      <rect x="6" y="4" width="4" height="16" rx="1" />
-    </svg>
-  )
-}
-
-
-function PlayIcon(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polygon points="6 3 20 12 6 21 6 3" />
-    </svg>
-  )
-}
-
-
-function RefreshCwIcon(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-      <path d="M21 3v5h-5" />
-      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-      <path d="M8 16H3v5" />
-    </svg>
-  )
-}
-
-
-function TrashIcon(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 6h18" />
-      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-    </svg>
-  )
+  );
 }

@@ -71,18 +71,18 @@ export async function GET(request) {
   }
 
   try {
-    const directMessages = await prisma.directMessage.findMany({
+    const outreachStrategies = await prisma.outreachStrategy.findMany({
       where: {
         userId: session.user.id,
       },
       orderBy: {
-        createdAt: 'desc',
+        relevanceScore: 'desc',
       },
     });
 
-    return NextResponse.json(directMessages);
+    return NextResponse.json(outreachStrategies);
   } catch (error) {
-    console.error('Error fetching direct messages:', error);
-    return NextResponse.json({ error: "Failed to fetch direct messages" }, { status: 500 });
+    console.error('Error fetching outreach strategies:', error);
+    return NextResponse.json({ error: "Failed to fetch outreach strategies" }, { status: 500 });
   }
 }

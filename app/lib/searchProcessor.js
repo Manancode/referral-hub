@@ -12,12 +12,12 @@ import {
     getSubredditSentiment, 
     getSubredditTopContributors, 
     getSubredditWiki, 
-    getUserMultireddits 
+    getUserMultireddits,
+    findRelatedSubreddits,
+    analyzeUserEngagement
 } from './redditApi';
 import { sendCSVReport } from '@/app/scheduledTasks';
 import { TIER_LIMITS } from './constants';
-import { redditApiRequest } from './redditApiUtils';
-import { calculateIntegratedRelevanceScore, loadModel } from './relevanceCalculator';
 
 const prisma = new PrismaClient();
 
@@ -26,8 +26,6 @@ export async function processSearch(job) {
     console.log(`Starting search process for user ${userId}, product idea: ${productIdea}, keywords: ${keywords.join(', ')}, tier: ${tier}`);
 
     try {
-        await loadModel();
-
         const project = await prisma.project.findFirst({
             where: { userId },
             orderBy: { updatedAt: 'desc' },
@@ -40,33 +38,34 @@ export async function processSearch(job) {
         console.log(`Project found: ${project.id}`);
 
         // Find relevant subreddits
-        const relatedSubreddits = await redditApiRequest(searchSubreddits, productIdea);
-        console.log(`Found ${relatedSubreddits.length} related subreddits`);
+        const relatedSubreddits = await searchSubreddits(productIdea);
+        console.log(`Found ${relatedSubreddits.data.children.length} related subreddits`);
 
         const search = await prisma.search.create({
             data: {
                 keywords,
-                subreddits: relatedSubreddits.map(subreddit => subreddit.name),
+                subreddits: relatedSubreddits.data.children.map(subreddit => subreddit.data.display_name),
                 project: { connect: { id: project.id } },
                 user: { connect: { id: userId } },
             },
         });
 
-        // Analyze and rank subreddits
-        const rankedSubreddits = await Promise.all(relatedSubreddits.map(async subreddit => {
-            const info = await redditApiRequest(getSubredditInfo, subreddit.name);
-            const rules = await redditApiRequest(getSubredditRules, subreddit.name);
-            const wiki = await redditApiRequest(getSubredditWiki, subreddit.name);
-            const moderators = await redditApiRequest(getSubredditModerators, subreddit.name);
-            const topContributors = await redditApiRequest(getSubredditTopContributors, subreddit.name);
-            const keywordStats = await redditApiRequest(getSubredditKeywordStats, subreddit.name, keywords);
-            const sentiment = await redditApiRequest(getSubredditSentiment, subreddit.name);
+        // Analyze and rank subreddits (limit to 5 to reduce processing time)
+        const rankedSubreddits = await Promise.all(relatedSubreddits.data.children.slice(0, 5).map(async subreddit => {
+            const [info, rules, wiki, moderators, topContributors, keywordStats, sentiment] = await Promise.all([
+                getSubredditInfo(subreddit.data.display_name),
+                getSubredditRules(subreddit.data.display_name),
+                getSubredditWiki(subreddit.data.display_name),
+                getSubredditModerators(subreddit.data.display_name),
+                getSubredditTopContributors(subreddit.data.display_name),
+                getSubredditKeywordStats(subreddit.data.display_name, keywords),
+                getSubredditSentiment(subreddit.data.display_name)
+            ]);
 
-            const relevance = await calculateSubredditRelevance(subreddit, productIdea, keywords, rules, wiki, keywordStats, sentiment);
+            const relevance = await calculateSubredditRelevance(subreddit.data, productIdea, keywords, rules, wiki, keywordStats, sentiment);
             
             return {
-                ...subreddit,
-                subscribers: info.data.subscribers,
+                ...subreddit.data,
                 relevance,
                 rules,
                 wiki,
@@ -79,49 +78,49 @@ export async function processSearch(job) {
 
         rankedSubreddits.sort((a, b) => (b.relevance * Math.log(b.subscribers)) - (a.relevance * Math.log(a.subscribers)));
         const topSubreddits = rankedSubreddits.slice(0, 5);
-        console.log(`Top 5 subreddits: ${topSubreddits.map(s => s.name).join(', ')}`);
+        console.log(`Top 5 subreddits: ${topSubreddits.map(s => s.display_name).join(', ')}`);
 
         // Fetch and analyze posts and comments
-        let allPosts = [];
-        let allComments = [];
+        const allPosts = [];
+        const allComments = [];
         for (const subreddit of topSubreddits) {
-            const posts = await redditApiRequest(searchPosts, {
-                query: `${productIdea} ${keywords.join(' ')}`,
-                subreddit: subreddit.name,
-                sort: 'relevance',
-                time: 'month',
-                limit: TIER_LIMITS[tier],
-            });
-            allPosts = allPosts.concat(posts.data.children);
+            const posts = await searchPosts(`${productIdea} ${keywords.join(' ')}`, subreddit.display_name, undefined, tier);
+            allPosts.push(...posts);
 
-            // Fetch comments for each post
-            for (const post of posts.data.children) {
-                const comments = await redditApiRequest(getPostComments, post.data.id, subreddit.name);
-                allComments = allComments.concat(comments);
+            // Fetch comments for each post (limit to 5 comments per post)
+            for (const post of posts.slice(0, 5)) {
+                const comments = await getPostComments(post.data.id, subreddit.display_name);
+                allComments.push(...comments.slice(0, 5));
             }
         }
 
         // Calculate and filter relevance scores for posts and comments
         const MIN_RELEVANCE_SCORE = 0.2;
-        allPosts = await Promise.all(allPosts.map(async post => {
-            const score = await calculateIntegratedRelevanceScore(post, keywords, productIdea);
-            return { ...post, relevanceScore: score.overallScore };
-        }));
+        const [scoredPosts, scoredComments] = await Promise.all([
+            Promise.all(allPosts.map(async post => {
+                const score = await calculateIntegratedRelevanceScore(post.data, keywords, productIdea);
+                return { ...post, relevanceScore: score };
+            })),
+            Promise.all(allComments.map(async comment => {
+                const score = await calculateIntegratedRelevanceScore(comment.data, keywords, productIdea);
+                return { ...comment, relevanceScore: score };
+            }))
+        ]);
 
-        allComments = await Promise.all(allComments.map(async comment => {
-            const score = await calculateIntegratedRelevanceScore(comment, keywords, productIdea);
-            return { ...comment, relevanceScore: score.overallScore };
-        }));
+        const filteredPosts = scoredPosts.filter(post => post.relevanceScore >= MIN_RELEVANCE_SCORE);
+        const filteredComments = scoredComments.filter(comment => comment.relevanceScore >= MIN_RELEVANCE_SCORE);
 
-        allPosts = allPosts.filter(post => post.relevanceScore >= MIN_RELEVANCE_SCORE);
-        allComments = allComments.filter(comment => comment.relevanceScore >= MIN_RELEVANCE_SCORE);
-
+        // Analyze user profiles
+        const uniqueUsers = [...new Set([...filteredPosts.map(post => post.data.author), ...filteredComments.map(comment => comment.data.author)])];
         const userProfiles = await Promise.all(
-            [...new Set([...allPosts.map(post => post.data.author), ...allComments.map(comment => comment.data.author)])].map(async username => {
-                const userInfo = await redditApiRequest(getUserInfo, username);
-                const userHistory = await redditApiRequest(getUserHistory, username);
-                const userMultireddits = await redditApiRequest(getUserMultireddits, username);
-                const profile = await analyzeUserProfile(userInfo, userHistory, userMultireddits, productIdea, keywords);
+            uniqueUsers.slice(0, 10).map(async username => {
+                const [userInfo, userHistory, userMultireddits, userEngagement] = await Promise.all([
+                    getUserInfo(username),
+                    getUserHistory(username),
+                    getUserMultireddits(username),
+                    analyzeUserEngagement(username)
+                ]);
+                const profile = await analyzeUserProfile(userInfo.data, userHistory, userMultireddits, userEngagement, productIdea, keywords);
                 return { username, ...profile };
             })
         );
@@ -130,14 +129,14 @@ export async function processSearch(job) {
         const limitedUserProfiles = userProfiles.slice(0, TIER_LIMITS[tier]);
 
         // Save search results and user profiles
-        await saveSearchResults(search.id, allPosts, allComments, limitedUserProfiles, topSubreddits);
+        await saveSearchResults(search.id, filteredPosts, filteredComments, limitedUserProfiles, topSubreddits);
 
         // Update search usage
         await updateSearchUsage(userId);
 
         // Send CSV report for paid tiers
         if (tier !== 'free') {
-            await sendCSVReport(userId, limitedUserProfiles, allPosts, allComments);
+            await sendCSVReport(userId, limitedUserProfiles, filteredPosts, filteredComments);
         }
 
         // Update job progress
@@ -145,8 +144,8 @@ export async function processSearch(job) {
 
         return {
             search,
-            searchResultsCount: allPosts.length + allComments.length,
-            relevantSubreddits: topSubreddits.map(s => s.name),
+            searchResultsCount: filteredPosts.length + filteredComments.length,
+            relevantSubreddits: topSubreddits.map(s => s.display_name),
             userProfilesCount: limitedUserProfiles.length,
         };
     } catch (error) {
@@ -155,17 +154,29 @@ export async function processSearch(job) {
     }
 }
 
+
 async function saveSearchResults(searchId, posts, comments, userProfiles, topSubreddits) {
     await prisma.searchResult.createMany({
-        data: [...posts, ...comments].map(item => ({
-            username: item.data.author,
-            postTitle: item.data.title || 'Comment',
-            postContent: item.data.selftext || item.data.body || '',
-            subreddit: item.data.subreddit,
-            relevanceScore: item.relevanceScore,
-            searchId,
-            isComment: !item.data.title,
-        })),
+        data: [
+            ...posts.map(item => ({
+                username: item.data.author,
+                postTitle: item.data.title,
+                postContent: item.data.selftext || '',
+                subreddit: item.data.subreddit,
+                relevanceScore: item.relevanceScore,
+                searchId,
+                isComment: false,
+            })),
+            ...comments.map(item => ({
+                username: item.data.author,
+                postTitle: 'Comment',
+                postContent: item.data.body || '',
+                subreddit: item.data.subreddit,
+                relevanceScore: item.relevanceScore,
+                searchId,
+                isComment: true,
+            }))
+        ],
     });
 
     await prisma.userProfile.createMany({
@@ -208,12 +219,59 @@ async function updateSearchUsage(userId) {
     });
 }
 
-export async function calculateSubredditRelevance(subreddit, productIdea, keywords, rules, wiki, keywordStats, sentiment) {
-    // Implement relevance calculation logic here
-    // This function should return a relevance score between 0 and 1
+async function calculateSubredditRelevance(subreddit, productIdea, keywords, rules, wiki, keywordStats, sentiment) {
+    // Implement your relevance calculation logic here
+    // This is a simplified example, you should adjust it based on your specific requirements
+    const keywordRelevance = keywords.reduce((acc, keyword) => {
+        return acc + (keywordStats[keyword] || 0);
+    }, 0) / keywords.length;
+
+    const wikiRelevance = wiki.toLowerCase().includes(productIdea.toLowerCase()) ? 1 : 0;
+
+    const ruleRelevance = rules.some(rule => 
+        rule.description.toLowerCase().includes(productIdea.toLowerCase())
+    ) ? 1 : 0;
+
+    const sentimentScore = sentiment === 'positive' ? 1 : sentiment === 'neutral' ? 0.5 : 0;
+
+    // You can adjust these weights based on what you consider more important
+    const weights = {
+        keywordRelevance: 0.4,
+        wikiRelevance: 0.3,
+        ruleRelevance: 0.2,
+        sentimentScore: 0.1
+    };
+
+    const relevanceScore = 
+        (keywordRelevance * weights.keywordRelevance) +
+        (wikiRelevance * weights.wikiRelevance) +
+        (ruleRelevance * weights.ruleRelevance) +
+        (sentimentScore * weights.sentimentScore);
+
+    return relevanceScore;
 }
 
-export async function analyzeUserProfile(userInfo, userHistory, userMultireddits, productIdea, keywords) {
-    // Implement user profile analysis logic here
-    // This function should return an object with analyzed user data and a relevance score
+async function analyzeUserProfile(userInfo, userHistory, userMultireddits, productIdea, keywords) {
+    // Implement your user profile analysis logic here
+    // This is a simplified example, you should adjust it based on your specific requirements
+    const relevantPosts = userHistory.filter(post => 
+        post.title.toLowerCase().includes(productIdea.toLowerCase()) ||
+        keywords.some(keyword => post.title.toLowerCase().includes(keyword.toLowerCase()))
+    );
+
+    const relevantMultireddits = userMultireddits.filter(multireddit => 
+        multireddit.name.toLowerCase().includes(productIdea.toLowerCase()) ||
+        keywords.some(keyword => multireddit.name.toLowerCase().includes(keyword.toLowerCase()))
+    );
+
+    const relevanceScore = (relevantPosts.length / userHistory.length) * 0.7 + 
+                           (relevantMultireddits.length / userMultireddits.length) * 0.3;
+
+    return {
+        relevanceScore,
+        karma: userInfo.link_karma + userInfo.comment_karma,
+        accountAge: (Date.now() - userInfo.created_utc * 1000) / (1000 * 60 * 60 * 24), // in days
+        relevantPostsCount: relevantPosts.length,
+        relevantMultiredditsCount: relevantMultireddits.length
+    };
 }

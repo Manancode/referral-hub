@@ -1,14 +1,24 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/authOptions';
-import { redirect } from 'next/navigation';
-import { SidebarDemo } from './components/usesidebar';
-import "../globals.css"; 
+import { Inter } from 'next/font/google'
+import { cn } from '@/lib/utils'
+import './globals.css'
+import { getServerSession } from 'next-auth'
+import { redirect } from 'next/navigation'
+import { authOptions } from '../api/auth/[...nextauth]/authOptions'
+import Navbar from './components/navbar'
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+const fontHeading = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-heading',
+})
+
+const fontBody = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-body',
+})
+
+export default async function Layout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -16,17 +26,19 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <div className="w-64 bg-white shadow-md">
-        <div className='flex flex-1 h-full'>
-        <SidebarDemo />
-        </div>
-      </div>
-      <main className="flex-1 overflow-x-hidden overflow-y-auto">
-        <div className="container mx-auto p-6">
+    <html lang="en">
+      <body 
+        className={cn(
+          'antialiased',
+          fontHeading.variable,
+          fontBody.variable
+        )}
+      >
+        <Navbar />
+        <main>
           {children}
-        </div>
-      </main>
-    </div>
-  );
+        </main>
+      </body>
+    </html>
+  )
 }

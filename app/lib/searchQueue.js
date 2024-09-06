@@ -1,27 +1,23 @@
 import Queue from 'bull';
-import redis from 'ioredis';
 
-const createRedisClient = () => {
-  const client = new redis({
+// Directly passing Redis connection options instead of creating an ioredis client
+export const searchQueue = new Queue('search-queue', {
+  redis: {
     host: process.env.REDIS_HOST,
     port: parseInt(process.env.REDIS_PORT || '6379'),
     password: process.env.REDIS_PASSWORD,
-    tls: {},
-    retryStrategy: (times) => {
-      const delay = Math.min(times * 50, 2000);
-      return delay;
+    tls: {}, // Use TLS as Aiven requires it
+  },
+  limiter: {
+    max: 10,
+    duration: 1000, // Allow a max of 10 jobs per second
+  },
+  defaultJobOptions: {
+    attempts: 3, // Retry the job 3 times on failure
+    backoff: {
+      type: 'exponential', // Exponential backoff between retries
+      delay: 2000, // Initial delay of 2 seconds
     },
-  });
-
-  client.on('error', (err) => {
-    console.error('Redis connection error:', err);
-  });
-
-  return client;
-};
-
-const redisClient = createRedisClient();
-
-export const searchQueue = new Queue('search-queue', {
-  redis: redisClient,
+    timeout: 300000, // 5-minute job timeout
+  }
 });
