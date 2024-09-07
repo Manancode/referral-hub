@@ -1,17 +1,16 @@
 import { generateContentSuggestions } from '../../../lib/contentSuggestion';
 
-export default async function handler(req, res) {
-  if (req.method === 'GET') {
-    const { searchId } = req.query;
+export async function GET(req) {
+  const { searchId } = new URL(req.url).searchParams;
 
-    try {
-      const suggestions = await generateContentSuggestions(searchId);
-      res.status(200).json(suggestions);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to generate suggestions' });
-    }
-  } else {
-    res.setHeader('Allow', ['GET']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+  try {
+    const suggestions = await generateContentSuggestions(searchId);
+    return new Response(JSON.stringify(suggestions), { status: 200 });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: 'Failed to generate suggestions' }), { status: 500 });
   }
+}
+
+export function POST() {
+  return new Response(`Method POST Not Allowed`, { status: 405 });
 }

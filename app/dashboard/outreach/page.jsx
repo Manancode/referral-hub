@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../../components/ui/dialog"
 import { Select , SelectTrigger, SelectValue, SelectContent, SelectItem} from "../../../components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import useToast from '@/components/ui/toaster'
+import { Toaster } from "../../../components/ui/toaster"
 
 export default function Outreach() {
-  const toast = useToast()
+  const toast = Toaster()
   const [outreachStrategies, setOutreachStrategies] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [selectedStrategy, setSelectedStrategy] = useState(null);
