@@ -4,8 +4,8 @@ import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@mantine/core';
-import { Select , SelectTrigger, SelectValue, SelectContent, SelectItem} from '@mantine/core';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../../components/ui/dialog"
+import { Select , SelectTrigger, SelectValue, SelectContent, SelectItem} from "../../../components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import useToast from '@/components/ui/toaster'
 

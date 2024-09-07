@@ -8,7 +8,7 @@ import { REDDIT_RATE_LIMIT, TIER_LIMITS } from '../../lib/constants';
 const prisma = new PrismaClient();
 
 const DM_RATE_LIMIT = {
-  maxMessages: 50,  // Adjust this value as needed
+  maxMessages: 50,  
   period: REDDIT_RATE_LIMIT.period
 };
 
@@ -18,7 +18,7 @@ async function generatePersonalizedMessage(templateContent, customFields, recipi
   Custom Fields: ${JSON.stringify(customFields)}
   Ensure the message is friendly, engaging, and not overtly promotional.`;
 
-  return await generateWithGPT(prompt, 200);  // Adjust token limit as needed
+  return await generateWithGPT(prompt, 200);  
 }
 
 async function sendRedditMessage(senderUserId, recipientUsername, messageContent) {

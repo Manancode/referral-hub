@@ -1,42 +1,39 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from "next-auth/next";
-import {authOptions} from '../auth/[...nextauth]/authOptions'
-import {postToReddit} from '../../lib/redditApi'
+import { authOptions } from '../auth/[...nextauth]/authOptions';
+import { postToReddit } from '../../lib/redditApi';
 
 const prisma = new PrismaClient();
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
-  }
-
-  // Check authentication
-  const session = await getServerSession(req, res, authOptions);
-  if (!session) {
-    return res.status(401).json({ error: 'You must be logged in to perform this action.' });
-  }
-
-  const { suggestion, type, action } = req.body;
-
+export async function POST(req) {
   try {
+    // Parse the request body
+    const body = await req.json();
+    const { suggestion, type, action } = body;
+
+    // Check authentication
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return new Response(JSON.stringify({ error: 'You must be logged in to perform this action.' }), { status: 401 });
+    }
+
     // Validate input
     if (!suggestion || !suggestion.id || !type || !action) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 });
     }
 
     if (!['post', 'reply', 'engagement'].includes(type)) {
-      return res.status(400).json({ error: 'Invalid suggestion type' });
+      return new Response(JSON.stringify({ error: 'Invalid suggestion type' }), { status: 400 });
     }
 
     if (!['approve', 'reject'].includes(action)) {
-      return res.status(400).json({ error: 'Invalid action' });
+      return new Response(JSON.stringify({ error: 'Invalid action' }), { status: 400 });
     }
 
     // Update the ContentSuggestion in the database
     const updatedSuggestion = await prisma.contentSuggestion.update({
       where: { id: suggestion.id },
-      data: { 
+      data: {
         status: action === 'approve' ? 'APPROVED' : 'REJECTED',
         updatedAt: new Date()
       },
@@ -49,7 +46,7 @@ export default async function handler(req, res) {
         // You might want to store the Reddit post ID or other metadata
         await prisma.contentSuggestion.update({
           where: { id: suggestion.id },
-          data: { 
+          data: {
             redditPostId: redditResponse.id,
             postStatus: 'POSTED'
           },
@@ -70,13 +67,13 @@ export default async function handler(req, res) {
       include: { search: true },
     });
 
-    res.status(200).json({ 
+    return new Response(JSON.stringify({
       message: `${type} ${action}ed successfully`,
       suggestion: finalSuggestion
-    });
+    }), { status: 200 });
   } catch (error) {
     console.error('Error in content-action:', error);
-    res.status(500).json({ error: `Failed to ${action} ${type}` });
+    return new Response(JSON.stringify({ error: `Failed to ${action} ${type}` }), { status: 500 });
   } finally {
     await prisma.$disconnect();
   }
