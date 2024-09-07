@@ -322,3 +322,38 @@ export const findRelatedSubreddits = async (subreddit: string) => {
   }));
   return results.sort((a, b) => b.subscribers - a.subscribers);
 };
+
+
+export const postToReddit = async (suggestion: any) => {
+  const token = await getAccessToken();
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+    'User-Agent': USER_AGENT,
+    'Content-Type': 'application/x-www-form-urlencoded',
+  };
+
+  const data = new URLSearchParams({
+    api_type: 'json',
+    kind: 'self',
+    sr: suggestion.search.subreddit,
+    title: suggestion.title,
+    text: suggestion.content,
+  });
+
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/api/submit`,
+      data,
+      { headers }
+    );
+
+    if (response.data.json.errors && response.data.json.errors.length > 0) {
+      throw new Error(response.data.json.errors[0][1]);
+    }
+
+    return response.data.json.data;
+  } catch (error) {
+    console.error('Error posting to Reddit:', error);
+    throw error;
+  }
+};
