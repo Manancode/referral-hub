@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "./auth/[...nextauth]";
-import { postToReddit } from '@/lib/redditApi'; // Assume this function exists to post content to Reddit
+import {authOptions} from '../auth/[...nextauth]/authOptions'
+import {postToReddit} from '../../lib/redditApi'
 
 const prisma = new PrismaClient();
 

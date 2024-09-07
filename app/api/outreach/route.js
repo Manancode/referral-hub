@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/authOptions';
 import { PrismaClient } from '@prisma/client';
-import { sendDirectMessage } from '@/lib/redditApi';
-import { generatePersonalizedMessage } from '@/lib/messageGenerator';
-import { RATE_LIMIT } from '@/lib/constants';
+import { sendDirectMessage } from '../../lib/redditApi'
+import { generatePersonalizedMessage } from '../../lib/messageGenerator'
+import { RATE_LIMIT } from '../../lib/constants'
 
 const prisma = new PrismaClient();
 
