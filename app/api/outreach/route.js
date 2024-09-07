@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/authOptions';
 import { PrismaClient } from '@prisma/client';
-import { sendDirectMessage } from '../../lib/redditApi';
 import { generateWithGPT } from '../../lib/openaiconfig';
 import { REDDIT_RATE_LIMIT, TIER_LIMITS } from '../../lib/constants';
 
@@ -20,6 +19,18 @@ async function generatePersonalizedMessage(templateContent, customFields, recipi
   Ensure the message is friendly, engaging, and not overtly promotional.`;
 
   return await generateWithGPT(prompt, 200);  // Adjust token limit as needed
+}
+
+async function sendRedditMessage(senderUserId, recipientUsername, messageContent) {
+  // TODO: Implement actual Reddit API call here
+  // This is a placeholder function that simulates sending a message
+  console.log(`Sending message to ${recipientUsername} from user ${senderUserId}: ${messageContent}`);
+  
+  // Simulate API call delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  // Return a mock result
+  return { success: true, messageId: 'mock-message-id-' + Date.now() };
 }
 
 export async function POST(request) {
@@ -77,30 +88,29 @@ export async function POST(request) {
     });
     const personalizedMessage = await generatePersonalizedMessage(messageTemplate.content, customFields, recipientUsername);
 
-    // Send DM via Reddit API
-    const messageResult = await sendDirectMessage(recipientUsername, personalizedMessage);
+    // Send the message using the placeholder function
+    const sendResult = await sendRedditMessage(session.user.id, recipientUsername, personalizedMessage);
 
-    // Save DM record
-    const dmRecord = await prisma.directMessage.create({
+    // Save the message record
+    const messageRecord = await prisma.directMessage.create({
       data: {
         userId: session.user.id,
         recipientUsername,
         messageContent: personalizedMessage,
-        status: messageResult.success ? 'SENT' : 'FAILED',
+        status: sendResult.success ? 'SENT' : 'FAILED',
+        redditMessageId: sendResult.messageId,
       }
     });
 
     return NextResponse.json({
       message: 'Direct message sent successfully',
-      dmId: dmRecord.id,
+      messageId: messageRecord.id,
     });
   } catch (error) {
     console.error('Error sending direct message:', error);
     return NextResponse.json({ error: 'Failed to send direct message', details: error.message }, { status: 500 });
   }
 }
-
-
 export async function GET(request) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
