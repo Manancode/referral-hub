@@ -3,12 +3,8 @@ import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/authOptions';
 import { searchQueue } from '../../lib/searchQueue'
-import { processSearch } from '../../lib/searchProcessor'
 
 const prisma = new PrismaClient();
-
-// Define the process handler only once, outside of the POST function
-searchQueue.process(processSearch);
 
 export async function POST(request) {
   try {
@@ -32,20 +28,37 @@ export async function POST(request) {
       return NextResponse.json({ error: 'No active subscription' }, { status: 403 });
     }
 
-    // Remove this line: searchQueue.process(processSearch);
-    const job = await searchQueue.add({
-      userId: session.user.id,
-      productIdea,
-      keywords,
-      tier: user.subscriptionTier,
-    });
+    // Add the search to the queue instead of processing it immediately
+   // In your POST handler
+const job = await searchQueue.add({
+  userId: session.user.id,
+  productIdea,
+  keywords,
+  tier: user.subscriptionTier,
+  projectId,
+}
 
-    // Rest of your code remains the same...
+);
+
+
+    // Create a search record in the database
+    const search = await prisma.search.create({
+      data: {
+        userId: session.user.id,
+        productIdea,
+        keywords,
+        projectId,
+        status: 'queued',
+      },
+    });
+    return NextResponse.json({ message: 'Search queued successfully', searchId: search.id , jobId : job.id});
   } catch (error) {
     console.error('Error processing POST request:', error);
     return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
   }
 }
+
+
 export async function GET(request) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
