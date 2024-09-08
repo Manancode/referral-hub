@@ -15,9 +15,9 @@ import {
     getUserMultireddits,
     findRelatedSubreddits,
     analyzeUserEngagement
-} from './redditApi';
-import { sendCSVReport } from '@/app/scheduledTasks';
-import { TIER_LIMITS } from './constants';
+} from './redditApi.js';
+import { sendCSVReport } from '../scheduledTasks.js';
+import { TIER_LIMITS } from './constants.js';
 
 const prisma = new PrismaClient();
 

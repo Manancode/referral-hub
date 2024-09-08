@@ -1,5 +1,5 @@
-import { searchQueue } from './searchQueue';
-import { processSearch } from './searchProcessor'
+import { searchQueue } from './searchQueue.js'
+import { processSearch } from './searchProcessor.js'
 
 function startWorker() {
   searchQueue.process(async (job) => {
