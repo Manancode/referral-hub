@@ -37,16 +37,16 @@ export default function Home() {
     <MantineProvider theme={theme} defaultColorScheme="dark">
     <div>
       <SignupPage/>
-      <SignInPage/>
+      {/* <SignInPage/>
       <HeaderMegaMenu/>
         <HeroSection/>
         <CustomerInsight/>
         <Timeline data={[]}/>
         {/* <FeaturesCards/> */}
-        <ProductFeatures/>
+        {/* <ProductFeatures/>
         <PricingPage/>
         <FaqSimple/>
-       <FooterLinks/>
+       <FooterLinks/> */} */
     </div>
   </MantineProvider>
 
